@@ -1,0 +1,10 @@
+Dockerfile
+.git
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.dockerignore
+.gitignore
+start-dev.sh
+docker-compose-dev.yaml
