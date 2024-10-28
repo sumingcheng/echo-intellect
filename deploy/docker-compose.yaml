@@ -1,6 +1,7 @@
 version: '3.8'
 
 services:
+  # Milvus 相关服务
   etcd:
     container_name: milvus-etcd
     image: quay.io/coreos/etcd:v3.5.5
@@ -17,6 +18,8 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+    networks:
+      - echointellect
 
   minio:
     container_name: milvus-minio
@@ -25,8 +28,8 @@ services:
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
     ports:
-      - "9001:9001"
       - "9000:9000"
+      - "9001:9001"
     volumes:
       - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/minio:/minio_data
     command: minio server /minio_data --console-address ":9001"
@@ -35,6 +38,8 @@ services:
       interval: 30s
       timeout: 20s
       retries: 3
+    networks:
+      - echointellect
 
   standalone:
     container_name: milvus-standalone
@@ -59,7 +64,10 @@ services:
     depends_on:
       - etcd
       - minio
+    networks:
+      - echointellect
 
+  # 数据库服务
   mysql:
     container_name: mysql_server
     image: mysql:8.0.36
@@ -79,14 +87,21 @@ services:
       timeout: 10s
       retries: 3
     restart: always
+    networks:
+      - echointellect
 
+  # Milvus 可视化工具
   attu:
+    container_name: milvus-attu
     image: zilliz/attu:v2.4
     ports:
       - "19000:3000"
     environment:
       MILVUS_URL: standalone:19530
+    networks:
+      - echointellect
 
+  # 监控工具
   uptime-kuma:
     container_name: uptime-kuma
     image: louislam/uptime-kuma:1
@@ -95,14 +110,17 @@ services:
       - "7001:3001"
     volumes:
       - uptime-kuma:/app/data
+    networks:
+      - echointellect
 
+  # 嵌入式服务
   embedding:
     container_name: embedding
     image: jokerwho/bge-large-api:latest
     ports:
-      - 6009:6008
+      - "6008:6008"
     networks:
-      - embedding_network
+      - echointellect
     restart: always
     deploy:
       resources:
@@ -118,6 +136,7 @@ services:
         max-size: "100m"
         max-file: "5"
 
+  # API 服务
   one-api:
     container_name: one-api
     image: justsong/one-api
@@ -125,25 +144,31 @@ services:
     ports:
       - "3000:3000"
     environment:
-      SQL_DSN: "root:123456@tcp(localhost:3306)/oneapi"
+      SQL_DSN: "root:123456@tcp(mysql:3306)/oneapi"
       TZ: Asia/Shanghai
     volumes:
       - /home/ubuntu/data/one-api:/data
+    depends_on:
+      - mysql
+    networks:
+      - echointellect
 
+  # Nginx 服务
   nginx:
     container_name: nginx
     image: nginx:stable-alpine
     restart: always
     ports:
-      - '8080:8080'
+      - "8080:8080"
     volumes:
       - ./html:/usr/share/nginx/html
       - ./test.conf:/etc/nginx/nginx.conf
+    networks:
+      - echointellect
 
 volumes:
   mysql:
   uptime-kuma:
 
 networks:
-  embedding_network:
-    name: embedding_network
+  echointellect:
