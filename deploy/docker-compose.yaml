@@ -61,8 +61,8 @@ services:
       - minio
 
   mysql:
-    image: mysql:8.0.36
     container_name: mysql_server
+    image: mysql:8.0.36
     environment:
       MYSQL_ROOT_PASSWORD: admin123456
       MYSQL_DATABASE: demo
@@ -88,8 +88,8 @@ services:
       MILVUS_URL: standalone:19530
 
   uptime-kuma:
-    image: louislam/uptime-kuma:1
     container_name: uptime-kuma
+    image: louislam/uptime-kuma:1
     restart: always
     ports:
       - "7001:3001"
@@ -97,8 +97,8 @@ services:
       - uptime-kuma:/app/data
 
   embedding:
-    image: jokerwho/bge-large-api:latest
     container_name: embedding
+    image: jokerwho/bge-large-api:latest
     ports:
       - 6009:6008
     networks:
@@ -108,7 +108,7 @@ services:
       resources:
         limits:
           cpus: '4'
-          memory: 8G
+          memory: '8G'
       restart_policy:
         condition: on-failure
         max_attempts: 3
@@ -117,6 +117,28 @@ services:
       options:
         max-size: "100m"
         max-file: "5"
+
+  one-api:
+    container_name: one-api
+    image: justsong/one-api
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      SQL_DSN: "root:123456@tcp(localhost:3306)/oneapi"
+      TZ: Asia/Shanghai
+    volumes:
+      - /home/ubuntu/data/one-api:/data
+
+  nginx:
+    container_name: nginx
+    image: nginx:stable-alpine
+    restart: always
+    ports:
+      - '8080:8080'
+    volumes:
+      - ./html:/usr/share/nginx/html
+      - ./test.conf:/etc/nginx/nginx.conf
 
 volumes:
   mysql:
