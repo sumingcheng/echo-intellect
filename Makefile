@@ -1,29 +1,22 @@
 docker_image_name ?= echoIntellect
 docker_image_tag ?= v1.0.0
 
-dockerfile_path = deploy/Dockerfile
-registry_prefix ?= ''
-
 build:
-	docker build --build-arg USE_CHINA_MIRROR=true -f $(dockerfile_path) -t $(docker_image_name):$(docker_image_tag) .
-
-build-nocache:
-	docker build --build-arg USE_CHINA_MIRROR=true --no-cache -f $(dockerfile_path) -t $(docker_image_name):$(docker_image_tag) .
+	docker build -f deploy/Dockerfile -t $(docker_image_name):$(docker_image_tag) .
 
 run:
-	cd deploy && docker-compose -f docker-compose-dev.yaml up -d
+	cd deploy && docker-compose -f docker-compose.yaml up -d
 
 down:
-	cd deploy && docker-compose -f docker-compose-dev.yaml down
+	cd deploy && docker-compose -f docker-compose.yaml down
+
+rm:
+	@docker rmi ${docker_image_name}:${docker_image_tag} || true
 
 reset:
 	-@git pull
-	-@cd deploy && docker-compose -f docker-compose-dev.yaml down
-	-@docker rmi ${docker_image_name}:${docker_image_tag} || true
+	-@cd deploy && docker-compose -f docker-compose.yaml down
 	-@$(MAKE) build
-	-@cd deploy && docker-compose -f docker-compose-dev.yaml up -d
+	-@cd deploy && docker-compose -f docker-compose.yaml up -d
 
-ddl:
-	bash bin/get_db_ddl.sh
-
-.PHONY: build build-nocache run reset ddl down-dev
+.PHONY: build run reset down rm

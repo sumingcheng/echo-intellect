@@ -1,126 +1,151 @@
-version: '3.8'
+version: '3.7'
 
 services:
-  # Milvus 相关服务
-  etcd:
-    container_name: milvus-etcd
+  milvusEtcd:
+    container_name: milvusEtcd
     image: quay.io/coreos/etcd:v3.5.5
     environment:
-      ETCD_AUTO_COMPACTION_MODE: revision
-      ETCD_AUTO_COMPACTION_RETENTION: 1000
-      ETCD_QUOTA_BACKEND_BYTES: 4294967296
-      ETCD_SNAPSHOT_COUNT: 50000
+      - ETCD_AUTO_COMPACTION_MODE=revision
+      - ETCD_AUTO_COMPACTION_RETENTION=1000
+      - ETCD_QUOTA_BACKEND_BYTES=4294967296
+      - ETCD_SNAPSHOT_COUNT=50000
+    networks:
+      - rag-network
     volumes:
-      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/etcd:/etcd
+      - ./milvus/etcd:/etcd
     command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
     healthcheck:
-      test: [ "CMD", "etcdctl", "endpoint", "health" ]
+      test: ['CMD', 'etcdctl', 'endpoint', 'health']
       interval: 30s
       timeout: 20s
       retries: 3
-    networks:
-      - echointellect
+    restart: unless-stopped
 
   minio:
-    container_name: milvus-minio
+    container_name: minio
     image: minio/minio:RELEASE.2023-03-20T20-16-18Z
     environment:
       MINIO_ACCESS_KEY: minioadmin
       MINIO_SECRET_KEY: minioadmin
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - '9001:9001'
+      - '9000:9000'
+    networks:
+      - rag-network
     volumes:
-      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/minio:/minio_data
+      - ./minio:/minio_data
     command: minio server /minio_data --console-address ":9001"
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:9000/minio/health/live" ]
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
       interval: 30s
       timeout: 20s
       retries: 3
-    networks:
-      - echointellect
+    restart: unless-stopped
 
-  standalone:
-    container_name: milvus-standalone
-    image: milvusdb/milvus:v2.4.12
-    command: [ "milvus", "run", "standalone" ]
+  milvusStandalone:
+    container_name: milvusStandalone
+    image: milvusdb/milvus:v2.4.3
+    ports:
+      - '19530:19530'
+      - '9091:9091'
+    command: ['milvus', 'run', 'standalone']
     security_opt:
       - seccomp:unconfined
     environment:
-      ETCD_ENDPOINTS: etcd:2379
+      ETCD_ENDPOINTS: milvusEtcd:2379
       MINIO_ADDRESS: minio:9000
+    networks:
+      - rag-network
     volumes:
-      - ${DOCKER_VOLUME_DIRECTORY:-.}/volumes/milvus:/var/lib/milvus
+      - ./milvus/data:/var/lib/milvus
     healthcheck:
-      test: [ "CMD", "curl", "-f", "http://localhost:9091/healthz" ]
+      test: ['CMD', 'curl', '-f', 'http://localhost:9091/healthz']
       interval: 30s
       start_period: 90s
       timeout: 20s
       retries: 3
-    ports:
-      - "19530:19530"
-      - "9091:9091"
     depends_on:
-      - etcd
-      - minio
-    networks:
-      - echointellect
+      - 'milvusEtcd'
+      - 'minio'
+    restart: unless-stopped
 
-  # 数据库服务
-  mysql:
-    container_name: mysql_server
-    image: mysql:8.0.36
-    environment:
-      MYSQL_ROOT_PASSWORD: admin123456
-      MYSQL_DATABASE: demo
-      MYSQL_USER: admin
-      MYSQL_PASSWORD: admin123456
+  attu:
+    container_name: attu
+    image: zilliz/attu:v2.4.12
     ports:
-      - "3306:3306"
-    command: --default-authentication-plugin=mysql_native_password
+      - '19000:3000'
+    networks:
+      - rag-network
+    environment:
+      - MILVUS_URL=milvusStandalone:19530
+    restart: unless-stopped
+
+  mongodb:
+    image: mongo:5.0.18
+    container_name: mongodb
+    restart: always
+    ports:
+      - 27017:27017
+    networks:
+      - rag-network
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=raguser
+      - MONGO_INITDB_ROOT_PASSWORD=ragpassword
     volumes:
-      - mysql:/var/lib/mysql
+      - ./mongo/data:/data/db
+    command: mongod --auth
+
+  redis:
+    container_name: redis
+    image: redis:7.2
+    ports:
+      - '6379:6379'
+    networks:
+      - rag-network
+    volumes:
+      - ./redis/data:/data
+    command: >
+      redis-server 
+      --appendonly yes 
+      --requirepass rag123456
+      --maxmemory 2gb 
+      --maxmemory-policy allkeys-lfu
     healthcheck:
-      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      test: ['CMD', 'redis-cli', '-a', 'rag123456', 'ping']
       interval: 30s
       timeout: 10s
       retries: 3
-    restart: always
-    networks:
-      - echointellect
+    restart: unless-stopped
 
-  # Milvus 可视化工具
-  attu:
-    container_name: milvus-attu
-    image: zilliz/attu:v2.4
+  meilisearch:
+    container_name: meilisearch
+    image: getmeili/meilisearch:v1.14
     ports:
-      - "19000:3000"
-    environment:
-      MILVUS_URL: standalone:19530
+      - '7700:7700'
     networks:
-      - echointellect
-
-  # 监控工具
-  uptime-kuma:
-    container_name: uptime-kuma
-    image: louislam/uptime-kuma:1
-    restart: always
-    ports:
-      - "7001:3001"
+      - rag-network
     volumes:
-      - uptime-kuma:/app/data
-    networks:
-      - echointellect
+      - ./meilisearch/data:/meili_data
+    environment:
+      MEILI_MASTER_KEY: rag-meili-key-123456
+      MEILI_ENV: production
+      MEILI_HTTP_ADDR: 0.0.0.0:7700
+      MEILI_NO_ANALYTICS: 'true'
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:7700/health']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
 
   # 嵌入式服务
   embedding:
     container_name: embedding
     image: jokerwho/bge-large-api:latest
     ports:
-      - "6008:6008"
+      - '6008:6008'
     networks:
-      - echointellect
+      - rag-network
     restart: always
     deploy:
       resources:
@@ -131,44 +156,20 @@ services:
         condition: on-failure
         max_attempts: 3
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "100m"
-        max-file: "5"
+        max-size: '100m'
+        max-file: '5'
 
-  # API 服务
-  one-api:
-    container_name: one-api
-    image: justsong/one-api
-    restart: always
+  rerank:
+    container_name: rerank
+    image: ghcr.io/openai/bge-reranker-api:latest
     ports:
-      - "3000:3000"
-    environment:
-      SQL_DSN: "root:123456@tcp(mysql:3306)/oneapi"
-      TZ: Asia/Shanghai
-    volumes:
-      - /home/ubuntu/data/one-api:/data
-    depends_on:
-      - mysql
+      - '8008:8000'
     networks:
-      - echointellect
-
-  # Nginx 服务
-  nginx:
-    container_name: nginx
-    image: nginx:stable-alpine
+      - rag-network
     restart: always
-    ports:
-      - "8080:8080"
-    volumes:
-      - ./html:/usr/share/nginx/html
-      - ./test.conf:/etc/nginx/nginx.conf
-    networks:
-      - echointellect
-
-volumes:
-  mysql:
-  uptime-kuma:
 
 networks:
-  echointellect:
+  rag-network:
+    name: rag-network
