@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from typing import Literal
 
 # 开发环境自动加载.env文件，生产环境使用系统环境变量
-if os.getenv("ENVIRONMENT", "development").lower() != "production":
+if os.getenv("ENVIRONMENT", "dev").lower() != "prod":
     load_dotenv()
 
 
