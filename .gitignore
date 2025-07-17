@@ -162,3 +162,10 @@ cython_debug/
 .idea/
 
 dev.md
+
+deploy/milvus/
+deploy/minio/
+deploy/mongo/
+deploy/redis/
+deploy/meilisearch/
+
