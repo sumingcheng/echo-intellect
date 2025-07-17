@@ -138,38 +138,6 @@ services:
       retries: 3
     restart: unless-stopped
 
-  # 嵌入式服务
-  embedding:
-    container_name: embedding
-    image: jokerwho/bge-large-api:latest
-    ports:
-      - '6008:6008'
-    networks:
-      - rag-network
-    restart: always
-    deploy:
-      resources:
-        limits:
-          cpus: '4'
-          memory: '8G'
-      restart_policy:
-        condition: on-failure
-        max_attempts: 3
-    logging:
-      driver: 'json-file'
-      options:
-        max-size: '100m'
-        max-file: '5'
-
-  rerank:
-    container_name: rerank
-    image: ghcr.io/openai/bge-reranker-api:latest
-    ports:
-      - '8008:8000'
-    networks:
-      - rag-network
-    restart: always
-
 networks:
   rag-network:
     name: rag-network

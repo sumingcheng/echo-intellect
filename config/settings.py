@@ -63,14 +63,14 @@ class AppSettings(BaseSettings):
 
     # ==================== AI服务端点配置 ====================
     embedding_service: str = Field(
-        default="http://localhost:6008/v1/embeddings",
+        default="http://localhost:11434",
         env="EMBEDDING_SERVICE",
-        description="嵌入模型服务端点",
+        description="嵌入模型服务端点（Ollama）",
     )
     rerank_service: str = Field(
-        default="http://localhost:8008/rerank",
+        default="http://localhost:11434",
         env="RERANK_SERVICE",
-        description="重排模型服务端点",
+        description="重排模型服务端点（Ollama）",
     )
 
     # ==================== 检索配置 ====================
