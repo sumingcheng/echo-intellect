@@ -2,24 +2,11 @@ from fastapi import APIRouter, HTTPException, BackgroundTasks
 from typing import Dict, Optional
 import logging
 
-from app.services.data_import_service import DataImportService
+from app.core.init import import_service
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/import", tags=["数据导入"])
-
-# 全局导入服务实例
-import_service = DataImportService()
-
-
-@router.on_event("startup")
-async def startup_import_service():
-    """启动时初始化导入服务"""
-    success = await import_service.initialize()
-    if not success:
-        logger.error("导入服务初始化失败")
-    else:
-        logger.info("导入服务初始化成功")
 
 
 @router.post("/start", summary="启动数据导入")
