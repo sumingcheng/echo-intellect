@@ -1,10 +1,20 @@
-import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from contextlib import asynccontextmanager
+import logging
 
 from config.settings import app_config
 from config.log import setup_logger
-from app.api.routes import router
+from app.core.init import initialize_system
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期管理"""
+    # 启动时执行
+    await initialize_system()
+    yield
+    # 关闭时执行（如果需要的话）
 
 
 def create_app() -> FastAPI:
@@ -16,13 +26,14 @@ def create_app() -> FastAPI:
         level=getattr(__import__('logging'), app_config.log_level),
     )
     
-    logger.info("🚀 Echo Intellect RAG 系统启动中...")
+    logger.info("Echo Intellect RAG 系统启动中...")
     
     # 创建FastAPI应用
     app = FastAPI(
         title="Echo Intellect",
         description="智能问答系统（RAG）",
         version="1.0.0",
+        lifespan=lifespan,
     )
     
     # 添加CORS中间件
@@ -34,20 +45,4 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
     
-    # 注册路由
-    app.include_router(router)
-    
-    return app
-
-
-# 创建应用实例
-app = create_app()
-
-
-if __name__ == "__main__":
-    uvicorn.run(
-        "app.main:app",
-        host="0.0.0.0",
-        port=app_config.app_port,
-        reload=app_config.debug,
-    )
+    return app 

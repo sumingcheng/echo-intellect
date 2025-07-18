@@ -5,7 +5,9 @@ from dotenv import load_dotenv
 from typing import Literal
 
 # 开发环境自动加载.env文件，生产环境使用系统环境变量
-if os.getenv("ENVIRONMENT", "dev").lower() != "prod":
+# 优先检查 APP_ENV，如果未设置则检查是否存在 .env 文件来判断环境
+app_env = os.getenv("APP_ENV", "dev").lower()
+if app_env != "prod" and os.path.exists(".env"):
     load_dotenv()
 
 
@@ -22,7 +24,7 @@ class AppSettings(BaseSettings):
 
     # ==================== 向量数据库配置 ====================
     milvus_uri: str = Field(
-        default="http://localhost:19530",
+        default="http://172.19.221.125:19530",
         env="MILVUS_URI",
         description="Milvus向量数据库连接地址",
     )
@@ -32,21 +34,21 @@ class AppSettings(BaseSettings):
 
     # ==================== MongoDB配置 ====================
     mongodb_uri: str = Field(
-        default="mongodb://raguser:ragpassword@localhost:27017/rag_db?authSource=admin",
+        default="mongodb://raguser:ragpassword@172.19.221.125:27017/rag_db?authSource=admin",
         env="MONGODB_URI",
         description="MongoDB连接字符串",
     )
 
     # ==================== Redis缓存配置 ====================
     redis_uri: str = Field(
-        default="redis://:rag123456@localhost:6379/0",
+        default="redis://:rag123456@172.19.221.125:6379/0",
         env="REDIS_URI",
         description="Redis连接URI",
     )
 
     # ==================== 全文检索配置 ====================
     meilisearch_uri: str = Field(
-        default="http://localhost:7700",
+        default="http://172.19.221.125:7700",
         env="MEILISEARCH_URI",
         description="Meilisearch服务地址",
     )
@@ -63,14 +65,20 @@ class AppSettings(BaseSettings):
 
     # ==================== AI服务端点配置 ====================
     embedding_service: str = Field(
-        default="http://localhost:11434",
+        default="http://172.19.221.125:11434",
         env="EMBEDDING_SERVICE",
         description="嵌入模型服务端点（Ollama）",
     )
     rerank_service: str = Field(
-        default="http://localhost:11434",
+        default="http://172.19.221.125:6006",
         env="RERANK_SERVICE",
-        description="重排模型服务端点（Ollama）",
+        description="重排模型服务端点（BGE Reranker）",
+    )
+    rerank_endpoint: str = Field(
+        default="/v1/rerank", env="RERANK_ENDPOINT", description="重排服务API端点"
+    )
+    rerank_access_token: str = Field(
+        default="123456", env="RERANK_ACCESS_TOKEN", description="重排服务访问令牌"
     )
 
     # ==================== 检索配置 ====================
@@ -120,7 +128,7 @@ class AppSettings(BaseSettings):
     @property
     def is_production(self) -> bool:
         """判断是否为生产环境"""
-        return self.environment == "production"
+        return self.app_env == "production"
 
     def __str__(self) -> str:
         """格式化输出配置信息，自动脱敏敏感数据"""
