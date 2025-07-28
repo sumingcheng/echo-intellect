@@ -32,6 +32,7 @@ interface ChatStore {
   updateSessionTitle: (sessionId: string, title: string) => void
   addMessage: (sessionId: string, message: Message) => void
   deleteSession: (sessionId: string) => void
+  clearAllSessions: () => void
   getCurrentSession: () => Session | null
   getCurrentMessages: () => Message[]
 }
@@ -124,6 +125,13 @@ export const useChatStore = create<ChatStore>()(
             sessions: newSessions,
             currentSessionId: newCurrentId,
           }
+        })
+      },
+
+      clearAllSessions: () => {
+        set({
+          sessions: [],
+          currentSessionId: null,
         })
       },
 

@@ -1,35 +1,32 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
-import { Send, Square } from 'lucide-react';
+import { RiSendPlaneFill, RiStopFill } from 'react-icons/ri';
 
 interface ChatInputProps {
   onSend: (message: string) => void;
+  isLoading: boolean;
   disabled?: boolean;
-  loading?: boolean;
 }
 
-export default function ChatInput({ onSend, disabled = false, loading = false }: ChatInputProps) {
+export default function ChatInput({ onSend, isLoading, disabled = false }: ChatInputProps) {
   const [input, setInput] = useState('');
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // 自动调整高度 - 使用useCallback避免重复创建
-  const adjustHeight = useCallback(() => {
+  // 自动调整textarea高度
+  useEffect(() => {
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.style.height = 'auto';
-      textarea.style.height = Math.min(textarea.scrollHeight, 200) + 'px';
+      textarea.style.height = Math.min(textarea.scrollHeight, 120) + 'px';
     }
-  }, []);
-
-  useEffect(() => {
-    adjustHeight();
-  }, [input, adjustHeight]);
+  }, [input]);
 
   const handleSend = useCallback(() => {
-    if (!input.trim() || disabled || loading) return;
-    onSend(input.trim());
-    setInput('');
-  }, [input, disabled, loading, onSend]);
+    if (input.trim() && !isLoading && !disabled) {
+      onSend(input.trim());
+      setInput('');
+    }
+  }, [input, isLoading, disabled, onSend]);
 
   const handleKeyPress = useCallback(
     (e: React.KeyboardEvent) => {
@@ -42,39 +39,30 @@ export default function ChatInput({ onSend, disabled = false, loading = false }:
   );
 
   return (
-    <div className=" bg-white px-4 py-3">
-      <div className="mx-auto max-w-4xl">
-        <div className="relative flex items-end gap-3">
-          <div className="relative flex-1">
-            <textarea
-              ref={textareaRef}
-              value={input}
-              onChange={(e) => setInput(e.target.value)}
-              onKeyPress={handleKeyPress}
-              placeholder="发送消息..."
-              disabled={disabled}
-              className="w-full resize-none rounded-xl border border-gray-300 bg-white px-4 py-3 pr-12 text-sm placeholder-gray-500 focus:border-gray-400 focus:outline-none focus:ring-0 disabled:bg-gray-50"
-              style={{ minHeight: '52px', maxHeight: '200px' }}
-              rows={1}
-            />
-
-            {/* 发送/停止按钮 */}
-            <div className="absolute bottom-2 right-2">
-              {loading ? (
-                <Button size="sm" variant="ghost" className="h-8 w-8 rounded-lg p-0 text-gray-500 hover:bg-gray-100" disabled>
-                  <Square className="h-4 w-4" />
-                </Button>
-              ) : (
-                <Button onClick={handleSend} disabled={!input.trim() || disabled} size="sm" className="h-8 w-8 rounded-lg p-0 disabled:opacity-30">
-                  <Send className="h-4 w-4" />
-                </Button>
-              )}
-            </div>
-          </div>
+    <div className=" border-gray-200 bg-white p-4">
+      <div className="flex items-end gap-3 max-w-4xl mx-auto">
+        <div className="flex-1 relative">
+          <textarea
+            ref={textareaRef}
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyPress}
+            placeholder="输入你的问题..."
+            disabled={disabled}
+            rows={1}
+            className="w-full resize-none rounded-xl border border-gray-300 px-4 py-3 pr-12 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 focus:outline-none disabled:bg-gray-50 disabled:text-gray-500 text-sm leading-relaxed"
+            style={{ minHeight: '48px', maxHeight: '120px' }}
+          />
         </div>
 
-        {/* 底部提示 */}
-        <div className="mt-2 text-center text-xs text-gray-400">AI可能会犯错误，请核实重要信息。</div>
+        <Button
+          onClick={handleSend}
+          disabled={!input.trim() || isLoading || disabled}
+          size="sm"
+          className="h-12 w-12 rounded-xl p-0 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300"
+        >
+          {isLoading ? <RiStopFill className="h-5 w-5" /> : <RiSendPlaneFill className="h-5 w-5" />}
+        </Button>
       </div>
     </div>
   );
