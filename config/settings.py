@@ -12,7 +12,7 @@ if app_env != "prod" and os.path.exists(".env"):
 
 
 class AppSettings(BaseSettings):
-    # ==================== 应用基础配置 ====================
+    # 应用基础配置
     app_env: str = Field(default="dev", env="APP_ENV", description="应用环境标识")
     app_port: int = Field(default=8000, env="APP_PORT", description="应用服务端口")
     debug: bool = Field(default=True, env="DEBUG", description="调试模式开关")
@@ -22,7 +22,7 @@ class AppSettings(BaseSettings):
         description="日志级别：DEBUG | INFO | WARNING | ERROR",
     )
 
-    # ==================== 向量数据库配置 ====================
+    # 向量数据库配置
     milvus_uri: str = Field(
         default="http://172.19.221.125:19530",
         env="MILVUS_URI",
@@ -32,21 +32,21 @@ class AppSettings(BaseSettings):
         default="rag_knowledge", env="MILVUS_COLLECTION", description="Milvus集合名称"
     )
 
-    # ==================== MongoDB配置 ====================
+    # MongoDB配置
     mongodb_uri: str = Field(
         default="mongodb://raguser:ragpassword@172.19.221.125:27017/rag_db?authSource=admin",
         env="MONGODB_URI",
         description="MongoDB连接字符串",
     )
 
-    # ==================== Redis缓存配置 ====================
+    # Redis缓存配置
     redis_uri: str = Field(
         default="redis://:rag123456@172.19.221.125:6379/0",
         env="REDIS_URI",
         description="Redis连接URI",
     )
 
-    # ==================== 全文检索配置 ====================
+    # 全文检索配置
     meilisearch_uri: str = Field(
         default="http://172.19.221.125:7700",
         env="MEILISEARCH_URI",
@@ -63,7 +63,7 @@ class AppSettings(BaseSettings):
         description="Meilisearch索引名称",
     )
 
-    # ==================== AI服务端点配置 ====================
+    # AI服务端点配置
     embedding_service: str = Field(
         default="http://172.19.221.125:11434",
         env="EMBEDDING_SERVICE",
@@ -81,7 +81,7 @@ class AppSettings(BaseSettings):
         default="123456", env="RERANK_ACCESS_TOKEN", description="重排服务访问令牌"
     )
 
-    # ==================== 检索配置 ====================
+    # 检索配置
     max_tokens_limit: int = Field(
         default=4000, env="MAX_TOKENS_LIMIT", description="最大token数量限制"
     )
@@ -89,7 +89,7 @@ class AppSettings(BaseSettings):
         default=0.6, env="RELEVANCE_THRESHOLD", description="相关性阈值（0-1之间）"
     )
 
-    # ==================== LLM配置 ====================
+    # LLM配置
     llm_model: str = Field(
         default="deepseek", env="LLM_MODEL", description="LLM模型名称"
     )
