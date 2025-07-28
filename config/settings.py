@@ -2,7 +2,7 @@ import os
 from pydantic_settings import BaseSettings
 from pydantic import Field, field_validator
 from dotenv import load_dotenv
-from typing import Literal
+from typing import Literal, List
 
 # 开发环境自动加载.env文件，生产环境使用系统环境变量
 # 优先检查 APP_ENV，如果未设置则检查是否存在 .env 文件来判断环境

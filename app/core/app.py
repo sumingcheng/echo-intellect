@@ -23,11 +23,11 @@ def create_app() -> FastAPI:
     logger = setup_logger(
         name="echo-intellect",
         log_file="logs/app.log" if not app_config.is_production else None,
-        level=getattr(__import__('logging'), app_config.log_level),
+        level=getattr(__import__("logging"), app_config.log_level),
     )
-    
+
     logger.info("Echo Intellect RAG 系统启动中...")
-    
+
     # 创建FastAPI应用
     app = FastAPI(
         title="Echo Intellect",
@@ -35,14 +35,16 @@ def create_app() -> FastAPI:
         version="1.0.0",
         lifespan=lifespan,
     )
-    
-    # 添加CORS中间件
+
+    # 添加CORS中间件 - 完全开放跨域
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+        allow_origins=["*"],  # 允许所有来源
+        allow_credentials=False,  # 不允许携带凭证（与*配合使用）
+        allow_methods=["*"],  # 允许所有HTTP方法
+        allow_headers=["*"],  # 允许所有请求头
     )
-    
-    return app 
+
+    logger.info("CORS配置: 完全开放跨域访问（允许所有来源、方法、请求头）")
+
+    return app

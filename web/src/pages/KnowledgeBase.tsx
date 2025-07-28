@@ -10,16 +10,25 @@ export default function KnowledgeBase() {
   const [loading, setLoading] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState<ImportResponse | null>(null);
+  const [statusError, setStatusError] = useState(false);
 
   // 获取导入状态
   const fetchStatus = useCallback(async () => {
     setLoading(true);
+    setStatusError(false);
     try {
       const response = await queryService.getImportStatus();
       setStatus(response);
     } catch (error) {
       console.error('获取状态失败:', error);
       toast.error('获取状态失败');
+      // 设置失败状态
+      setStatusError(true);
+      setStatus({
+        service_initialized: false,
+        milvus_connected: false,
+        embedding_available: false,
+      });
     } finally {
       setLoading(false);
     }
@@ -140,10 +149,18 @@ export default function KnowledgeBase() {
                     <p className="text-sm text-gray-600 mt-2">获取状态中...</p>
                   </div>
                 ) : status ? (
-                  <div className="grid gap-3">
-                    <StatusIndicator label="服务初始化" value={status.service_initialized} icon={<RiCheckLine className="h-5 w-5 text-blue-600" />} />
-                    <StatusIndicator label="Milvus 连接" value={status.milvus_connected} icon={<RiCheckLine className="h-5 w-5 text-green-600" />} />
-                    <StatusIndicator label="向量模型" value={status.embedding_available} icon={<RiCheckLine className="h-5 w-5 text-purple-600" />} />
+                  <div className="space-y-3">
+                    {statusError && (
+                      <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg">
+                        <RiErrorWarningLine className="h-5 w-5 text-red-500" />
+                        <span className="text-sm text-red-700 font-medium">连接失败 - 以下为最后已知状态</span>
+                      </div>
+                    )}
+                    <div className="grid gap-3">
+                      <StatusIndicator label="服务初始化" value={status.service_initialized} icon={<RiCheckLine className="h-5 w-5 text-blue-600" />} />
+                      <StatusIndicator label="Milvus 连接" value={status.milvus_connected} icon={<RiCheckLine className="h-5 w-5 text-green-600" />} />
+                      <StatusIndicator label="向量模型" value={status.embedding_available} icon={<RiCheckLine className="h-5 w-5 text-purple-600" />} />
+                    </div>
                   </div>
                 ) : (
                   <div className="text-center py-8">
