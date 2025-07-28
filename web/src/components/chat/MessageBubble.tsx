@@ -2,6 +2,7 @@ import { RiRobotFill, RiUser3Fill } from 'react-icons/ri';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
+import { type Message } from '@/store/chat';
 
 interface MessageBubbleProps {
   message: Message;
@@ -29,19 +30,20 @@ export default function MessageBubble({ message, showMetadata = true }: MessageB
                 remarkPlugins={[remarkGfm]}
                 rehypePlugins={[rehypeHighlight]}
                 components={{
-                  code: ({ className, children, ...props }: any) => {
+                  code: (props: any) => {
+                    const { className, children, ...rest } = props;
                     const isInline = !className;
                     return isInline ? (
-                      <code className="bg-gray-200 text-gray-800 px-1 py-0.5 rounded text-xs font-mono" {...props}>
+                      <code className="bg-gray-200 text-gray-800 px-1 py-0.5 rounded text-xs font-mono" {...rest}>
                         {children}
                       </code>
                     ) : (
-                      <code className={`${className} text-sm font-mono`} {...props}>
+                      <code className={`${className} text-sm font-mono`} {...rest}>
                         {children}
                       </code>
                     );
                   },
-                  pre: ({ children }) => (
+                  pre: (props: any) => (
                     <pre
                       className="bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto my-2"
                       style={{
@@ -49,27 +51,27 @@ export default function MessageBubble({ message, showMetadata = true }: MessageB
                         color: '#e2e8f0',
                       }}
                     >
-                      {children}
+                      {props.children}
                     </pre>
                   ),
-                  a: ({ href, children }) => (
-                    <a href={href} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
-                      {children}
+                  a: (props: any) => (
+                    <a href={props.href} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
+                      {props.children}
                     </a>
                   ),
-                  table: ({ children }) => (
+                  table: (props: any) => (
                     <div className="overflow-x-auto my-2">
-                      <table className="min-w-full border-collapse border border-gray-300">{children}</table>
+                      <table className="min-w-full border-collapse border border-gray-300">{props.children}</table>
                     </div>
                   ),
-                  th: ({ children }) => <th className="border border-gray-300 px-3 py-2 bg-gray-100 font-semibold text-left">{children}</th>,
-                  td: ({ children }) => <td className="border border-gray-300 px-3 py-2">{children}</td>,
-                  blockquote: ({ children }) => <blockquote className="border-l-4 border-gray-400 pl-4 my-2 text-gray-700 italic">{children}</blockquote>,
-                  ul: ({ children }) => <ul className="list-disc pl-5 my-1 space-y-1">{children}</ul>,
-                  ol: ({ children }) => <ol className="list-decimal pl-5 my-1 space-y-1">{children}</ol>,
-                  h1: ({ children }) => <h1 className="text-xl font-bold text-gray-900 my-2">{children}</h1>,
-                  h2: ({ children }) => <h2 className="text-lg font-semibold text-gray-900 my-2">{children}</h2>,
-                  h3: ({ children }) => <h3 className="text-base font-medium text-gray-900 my-2">{children}</h3>,
+                  th: (props: any) => <th className="border border-gray-300 px-3 py-2 bg-gray-100 font-semibold text-left">{props.children}</th>,
+                  td: (props: any) => <td className="border border-gray-300 px-3 py-2">{props.children}</td>,
+                  blockquote: (props: any) => <blockquote className="border-l-4 border-gray-400 pl-4 my-2 text-gray-700 italic">{props.children}</blockquote>,
+                  ul: (props: any) => <ul className="list-disc pl-5 my-1 space-y-1">{props.children}</ul>,
+                  ol: (props: any) => <ol className="list-decimal pl-5 my-1 space-y-1">{props.children}</ol>,
+                  h1: (props: any) => <h1 className="text-xl font-bold text-gray-900 my-2">{props.children}</h1>,
+                  h2: (props: any) => <h2 className="text-lg font-semibold text-gray-900 my-2">{props.children}</h2>,
+                  h3: (props: any) => <h3 className="text-base font-medium text-gray-900 my-2">{props.children}</h3>,
                 }}
               >
                 {message.content}
@@ -80,9 +82,9 @@ export default function MessageBubble({ message, showMetadata = true }: MessageB
 
         {showMetadata && !isUser && message.metadata && (
           <div className="text-xs text-gray-500 mt-2 space-y-1">
-            {message.metadata.processing_time && <div>处理时间: {(message.metadata.processing_time as number).toFixed(2)}s</div>}
-            {message.metadata.tokens_used && <div>Token使用: {message.metadata.tokens_used as number}</div>}
-            {message.metadata.relevance_score && <div>相关性: {((message.metadata.relevance_score as number) * 100).toFixed(1)}%</div>}
+            {message.metadata.processing_time && <div>处理时间: {message.metadata.processing_time.toFixed(2)}s</div>}
+            {message.metadata.tokens_used && <div>Token使用: {message.metadata.tokens_used}</div>}
+            {message.metadata.relevance_score && <div>相关性: {(message.metadata.relevance_score * 100).toFixed(1)}%</div>}
           </div>
         )}
       </div>
