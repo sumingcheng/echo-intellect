@@ -1,5 +1,6 @@
 import { useChatStore } from '@/store/chat';
-import { RiMoreFill, RiPencilFill } from 'react-icons/ri';
+import { RiMoreFill, RiPencilFill, RiDatabaseLine } from 'react-icons/ri';
+import { Link } from 'react-router-dom';
 
 export default function ChatHeader() {
   const { getCurrentSession } = useChatStore();
@@ -35,6 +36,13 @@ export default function ChatHeader() {
           <button className="p-2 rounded-lg hover:bg-gray-100 transition-colors">
             <RiMoreFill className="h-4 w-4 text-gray-600" />
           </button>
+          <Link 
+            to="/knowledge" 
+            className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
+            title="知识库管理"
+          >
+            <RiDatabaseLine className="h-4 w-4 text-gray-600" />
+          </Link>
         </div>
       </div>
     </div>
