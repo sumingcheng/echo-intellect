@@ -1,15 +1,13 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import Chat from '@/components/Chat';
-import KnowledgeBase from '@/pages/KnowledgeBase';
+import ChatPage from '@/features/chat/ChatPage';
 
 function App() {
   return (
     <>
       <Router>
         <Routes>
-          <Route path="/" element={<Chat />} />
-          <Route path="/knowledge" element={<KnowledgeBase />} />
+          <Route path="/" element={<ChatPage />} />
         </Routes>
       </Router>
       <Toaster

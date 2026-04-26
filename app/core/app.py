@@ -1,9 +1,11 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
-import logging
 
 from config.settings import app_config
+from app.api.v1.router import router as api_v1_router
+from app.core.container import AppContainer, create_container
 from config.log import setup_logger
 from app.core.init import initialize_system
 
@@ -12,12 +14,12 @@ from app.core.init import initialize_system
 async def lifespan(app: FastAPI):
     """应用生命周期管理"""
     # 启动时执行
-    await initialize_system()
+    await initialize_system(app.state.container)
     yield
     # 关闭时执行（如果需要的话）
 
 
-def create_app() -> FastAPI:
+def create_app(container: AppContainer | None = None) -> FastAPI:
     """创建FastAPI应用实例"""
     # 初始化日志
     logger = setup_logger(
@@ -35,6 +37,7 @@ def create_app() -> FastAPI:
         version="1.0.0",
         lifespan=lifespan,
     )
+    app.state.container = container or create_container()
 
     # 添加CORS中间件 - 完全开放跨域
     app.add_middleware(
@@ -46,5 +49,6 @@ def create_app() -> FastAPI:
     )
 
     logger.info("CORS配置: 完全开放跨域访问（允许所有来源、方法、请求头）")
+    app.include_router(api_v1_router)
 
     return app

@@ -1,0 +1,29 @@
+app_env: dev
+app_port: 8000
+debug: true
+log_level: INFO
+
+qdrant_url: http://127.0.0.1:6333
+qdrant_api_key: ""
+qdrant_collection: rag_knowledge
+
+mongodb_uri: mongodb://raguser:ragpassword@127.0.0.1:27017/rag_db?authSource=admin
+redis_uri: redis://:rag123456@127.0.0.1:6379/0
+
+openai_api_key: ""
+openai_embedding_model: text-embedding-3-small
+openai_embedding_dimension: 1536
+openai_transcription_model: whisper-1
+openai_tts_model: tts-1
+openai_tts_voice: alloy
+openai_tts_format: mp3
+
+rerank_service: http://127.0.0.1:6006
+rerank_endpoint: /v1/rerank
+rerank_access_token: "123456"
+
+max_tokens_limit: 4000
+relevance_threshold: 0.6
+
+llm_providers: []
+default_llm: ""

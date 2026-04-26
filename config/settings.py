@@ -1,14 +1,84 @@
 import os
-from pydantic_settings import BaseSettings
-from pydantic import Field, field_validator
-from dotenv import load_dotenv
-from typing import Literal, List
+from pathlib import Path
+from typing import Any
 
-# 开发环境自动加载.env文件，生产环境使用系统环境变量
-# 优先检查 APP_ENV，如果未设置则检查是否存在 .env 文件来判断环境
-app_env = os.getenv("APP_ENV", "dev").lower()
-if app_env != "prod" and os.path.exists(".env"):
-    load_dotenv()
+import yaml
+from pydantic import BaseModel, Field, field_validator
+from pydantic_settings import BaseSettings
+from dotenv import load_dotenv
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+
+# 合并后的原始YAML，供 get_llm_channels 等读取复杂结构
+_raw_yaml: dict[str, Any] = {}
+
+
+def _load_yaml_config(path: Path) -> dict[str, Any]:
+    """读取YAML配置，文件不存在就返回空配置。"""
+    if not path.exists():
+        return {}
+
+    with path.open("r", encoding="utf-8") as file:
+        data = yaml.safe_load(file) or {}
+
+    if not isinstance(data, dict):
+        raise ValueError(f"配置文件必须是YAML对象: {path}")
+
+    return data
+
+
+def _set_env_defaults(config: dict[str, Any]) -> None:
+    """YAML标量值写入env默认值，复杂类型（list/dict）跳过。"""
+    for key, value in config.items():
+        if value is None or isinstance(value, (list, dict)):
+            continue
+
+        env_key = key.upper()
+        if isinstance(value, bool):
+            env_value = "true" if value else "false"
+        else:
+            env_value = str(value)
+
+        os.environ.setdefault(env_key, env_value)
+
+
+def _load_runtime_config() -> None:
+    """加载后端运行配置：环境变量/.env > config.local.yaml > config.yaml > 代码默认值。"""
+    global _raw_yaml
+    app_env = os.getenv("APP_ENV", "dev").lower()
+    if app_env not in {"prod", "production"} and (ROOT_DIR / ".env").exists():
+        load_dotenv(ROOT_DIR / ".env")
+
+    yaml_config = _load_yaml_config(ROOT_DIR / "config.yaml")
+    yaml_config.update(_load_yaml_config(ROOT_DIR / "config.local.yaml"))
+    _raw_yaml = yaml_config
+    _set_env_defaults(yaml_config)
+
+
+_load_runtime_config()
+
+
+# ── LLM Provider 配置 ──
+
+class LLMProvider(BaseModel):
+    """LLM 供应商配置（OpenAI / DeepSeek 等）"""
+    id: str = Field(description="供应商标识，如 openai / deepseek")
+    label: str = Field(description="前端显示名称，如 OpenAI")
+    api_base: str = Field(description="API 端点")
+    api_key: str = Field(description="API 密钥")
+
+
+def get_llm_providers() -> list[LLMProvider]:
+    """从 YAML 获取所有已配置的 LLM 供应商。"""
+    raw = _raw_yaml.get("llm_providers", [])
+    if not isinstance(raw, list):
+        return []
+    return [LLMProvider(**p) for p in raw if isinstance(p, dict)]
+
+
+def get_default_llm() -> str:
+    """返回默认模型 ID。"""
+    return str(_raw_yaml.get("default_llm", ""))
 
 
 class AppSettings(BaseSettings):
@@ -23,54 +93,72 @@ class AppSettings(BaseSettings):
     )
 
     # 向量数据库配置
-    milvus_uri: str = Field(
-        default="http://172.19.221.125:19530",
-        env="MILVUS_URI",
-        description="Milvus向量数据库连接地址",
+    qdrant_url: str = Field(
+        default="http://127.0.0.1:6333",
+        env="QDRANT_URL",
+        description="Qdrant向量数据库连接地址",
     )
-    milvus_collection: str = Field(
-        default="rag_knowledge", env="MILVUS_COLLECTION", description="Milvus集合名称"
+    qdrant_api_key: str = Field(
+        default="", env="QDRANT_API_KEY", description="Qdrant API密钥"
+    )
+    qdrant_collection: str = Field(
+        default="rag_knowledge",
+        env="QDRANT_COLLECTION",
+        description="Qdrant集合名称",
     )
 
     # MongoDB配置
     mongodb_uri: str = Field(
-        default="mongodb://raguser:ragpassword@172.19.221.125:27017/rag_db?authSource=admin",
+        default="mongodb://raguser:ragpassword@127.0.0.1:27017/rag_db?authSource=admin",
         env="MONGODB_URI",
         description="MongoDB连接字符串",
     )
 
     # Redis缓存配置
     redis_uri: str = Field(
-        default="redis://:rag123456@172.19.221.125:6379/0",
+        default="redis://:rag123456@127.0.0.1:6379/0",
         env="REDIS_URI",
         description="Redis连接URI",
     )
 
-    # 全文检索配置
-    meilisearch_uri: str = Field(
-        default="http://172.19.221.125:7700",
-        env="MEILISEARCH_URI",
-        description="Meilisearch服务地址",
+    # OpenAI Embedding配置
+    openai_api_key: str = Field(
+        default="", env="OPENAI_API_KEY", description="OpenAI API密钥"
     )
-    meilisearch_api_key: str = Field(
-        default="rag-meili-key-123456",
-        env="MEILISEARCH_API_KEY",
-        description="Meilisearch API密钥",
+    openai_embedding_model: str = Field(
+        default="text-embedding-3-small",
+        env="OPENAI_EMBEDDING_MODEL",
+        description="OpenAI嵌入模型名称",
     )
-    meilisearch_index: str = Field(
-        default="rag_documents",
-        env="MEILISEARCH_INDEX",
-        description="Meilisearch索引名称",
+    openai_embedding_dimension: int = Field(
+        default=1536,
+        env="OPENAI_EMBEDDING_DIMENSION",
+        description="OpenAI嵌入向量维度",
+    )
+    openai_transcription_model: str = Field(
+        default="whisper-1",
+        env="OPENAI_TRANSCRIPTION_MODEL",
+        description="OpenAI语音转文字模型名称",
+    )
+    openai_tts_model: str = Field(
+        default="tts-1",
+        env="OPENAI_TTS_MODEL",
+        description="OpenAI文字转语音模型名称",
+    )
+    openai_tts_voice: str = Field(
+        default="alloy",
+        env="OPENAI_TTS_VOICE",
+        description="OpenAI文字转语音默认声音",
+    )
+    openai_tts_format: str = Field(
+        default="mp3",
+        env="OPENAI_TTS_FORMAT",
+        description="OpenAI文字转语音默认音频格式",
     )
 
-    # AI服务端点配置
-    embedding_service: str = Field(
-        default="http://172.19.221.125:11434",
-        env="EMBEDDING_SERVICE",
-        description="嵌入模型服务端点（Ollama）",
-    )
+    # 重排服务配置（默认不启用）
     rerank_service: str = Field(
-        default="http://172.19.221.125:6006",
+        default="http://127.0.0.1:6006",
         env="RERANK_SERVICE",
         description="重排模型服务端点（BGE Reranker）",
     )
@@ -89,18 +177,7 @@ class AppSettings(BaseSettings):
         default=0.6, env="RELEVANCE_THRESHOLD", description="相关性阈值（0-1之间）"
     )
 
-    # LLM配置
-    llm_model: str = Field(
-        default="deepseek", env="LLM_MODEL", description="LLM模型名称"
-    )
-    llm_api_base: str = Field(
-        default="https://api.deepseek.com",
-        env="LLM_API_BASE",
-        description="LLM API基础URL",
-    )
-    llm_api_key: str = Field(
-        default="your-api-key-here", env="LLM_API_KEY", description="LLM API密钥"
-    )
+    # LLM渠道配置已迁移到 llm_channels（YAML list），通过 get_llm_channels() 获取
 
     class Config:
         """Pydantic配置类"""
@@ -117,6 +194,15 @@ class AppSettings(BaseSettings):
             raise ValueError(f"log_level must be one of {valid_levels}")
         return v.upper()
 
+    @field_validator("app_env")
+    @classmethod
+    def normalize_app_env(cls, v: str) -> str:
+        """统一生产环境写法，避免 prod/production 双标准。"""
+        value = v.lower()
+        if value == "production":
+            return "prod"
+        return value
+
     @field_validator("relevance_threshold")
     @classmethod
     def validate_relevance_threshold(cls, v: float) -> float:
@@ -128,15 +214,15 @@ class AppSettings(BaseSettings):
     @property
     def is_production(self) -> bool:
         """判断是否为生产环境"""
-        return self.app_env == "production"
+        return self.app_env == "prod"
 
     def __str__(self) -> str:
         """格式化输出配置信息，自动脱敏敏感数据"""
         sensitive_fields = {
-            "mongodb_uri",  # MongoDB连接字符串包含密码
-            "redis_uri",  # Redis URI包含密码
-            "meilisearch_api_key",  # Meilisearch API密钥
-            "llm_api_key",  # LLM API密钥
+            "mongodb_uri",
+            "redis_uri",
+            "openai_api_key",
+            "qdrant_api_key",
         }
 
         config_lines = []

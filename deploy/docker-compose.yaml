@@ -1,85 +1,4 @@
-version: '3.7'
-
 services:
-  milvusEtcd:
-    container_name: milvusEtcd
-    image: quay.io/coreos/etcd:v3.5.5
-    environment:
-      - ETCD_AUTO_COMPACTION_MODE=revision
-      - ETCD_AUTO_COMPACTION_RETENTION=1000
-      - ETCD_QUOTA_BACKEND_BYTES=4294967296
-      - ETCD_SNAPSHOT_COUNT=50000
-    networks:
-      - rag-network
-    volumes:
-      - ./milvus/etcd:/etcd
-    command: etcd -advertise-client-urls=http://127.0.0.1:2379 -listen-client-urls http://0.0.0.0:2379 --data-dir /etcd
-    healthcheck:
-      test: ['CMD', 'etcdctl', 'endpoint', 'health']
-      interval: 30s
-      timeout: 20s
-      retries: 3
-    restart: unless-stopped
-
-  minio:
-    container_name: minio
-    image: minio/minio:RELEASE.2023-03-20T20-16-18Z
-    environment:
-      MINIO_ACCESS_KEY: minioadmin
-      MINIO_SECRET_KEY: minioadmin
-    ports:
-      - '9001:9001'
-      - '9000:9000'
-    networks:
-      - rag-network
-    volumes:
-      - ./minio:/minio_data
-    command: minio server /minio_data --console-address ":9001"
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://172.19.221.125:9000/minio/health/live']
-      interval: 30s
-      timeout: 20s
-      retries: 3
-    restart: unless-stopped
-
-  milvusStandalone:
-    container_name: milvusStandalone
-    image: milvusdb/milvus:v2.4.3
-    ports:
-      - '19530:19530'
-      - '9091:9091'
-    command: ['milvus', 'run', 'standalone']
-    security_opt:
-      - seccomp:unconfined
-    environment:
-      ETCD_ENDPOINTS: milvusEtcd:2379
-      MINIO_ADDRESS: minio:9000
-    networks:
-      - rag-network
-    volumes:
-      - ./milvus/data:/var/lib/milvus
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://172.19.221.125:9091/healthz']
-      interval: 30s
-      start_period: 90s
-      timeout: 20s
-      retries: 3
-    depends_on:
-      - 'milvusEtcd'
-      - 'minio'
-    restart: unless-stopped
-
-  attu:
-    container_name: attu
-    image: zilliz/attu:v2.4.12
-    ports:
-      - '19000:3000'
-    networks:
-      - rag-network
-    environment:
-      - MILVUS_URL=milvusStandalone:19530
-    restart: unless-stopped
-
   mongodb:
     image: mongo:5.0.18
     container_name: mongodb
@@ -94,6 +13,18 @@ services:
     volumes:
       - ./mongo/data:/data/db
     command: mongod --auth
+
+  qdrant:
+    container_name: qdrant
+    image: qdrant/qdrant:latest
+    ports:
+      - '6333:6333'
+      - '6334:6334'
+    networks:
+      - rag-network
+    volumes:
+      - ./qdrant/storage:/qdrant/storage
+    restart: unless-stopped
 
   redis:
     container_name: redis
@@ -112,52 +43,6 @@ services:
       --maxmemory-policy allkeys-lfu
     healthcheck:
       test: ['CMD', 'redis-cli', '-a', 'rag123456', 'ping']
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    restart: unless-stopped
-
-  meilisearch:
-    container_name: meilisearch
-    image: getmeili/meilisearch:v1.14
-    ports:
-      - '7700:7700'
-    networks:
-      - rag-network
-    volumes:
-      - ./meilisearch/data:/meili_data
-    environment:
-      MEILI_MASTER_KEY: rag-meili-key-123456
-      MEILI_ENV: production
-      MEILI_HTTP_ADDR: 0.0.0.0:7700
-      MEILI_NO_ANALYTICS: 'true'
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://172.19.221.125:7700/health']
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    restart: unless-stopped
-
-  reranker:
-    image: registry.cn-hangzhou.aliyuncs.com/fastgpt/bge-rerank-base:v0.1
-    container_name: reranker
-    shm_size: '8gb'
-    # GPU运行环境，如果宿主机未安装，将deploy配置隐藏即可
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    ports:
-      - '6006:6006'
-    networks:
-      - rag-network
-    environment:
-      - ACCESS_TOKEN=123456
-    healthcheck:
-      test: ['CMD', 'curl', '-f', 'http://localhost:6006/health']
       interval: 30s
       timeout: 10s
       retries: 3

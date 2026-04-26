@@ -1,6 +1,9 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@source "../node_modules/streamdown";
 
-/* 基础样式重置 */
+@custom-variant dark (&:where(.dark, .dark *));
+
 * {
   box-sizing: border-box;
 }

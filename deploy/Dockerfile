@@ -1,4 +1,4 @@
-FROM python:3.10-slim
+FROM python:3.11-slim
 
 WORKDIR /code
 
@@ -12,6 +12,6 @@ ENV PATH="/code/.venv/bin:${PATH}"
 
 COPY . .
 
-EXPOSE 8080
+EXPOSE 8000
 
-CMD ["uvicorn", "app", "--host", "0.0.0.0", "--port", "50000"]
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

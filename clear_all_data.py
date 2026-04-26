@@ -27,8 +27,7 @@ async def clear_all_data():
         print("⚠️  警告：此操作将清空所有数据！")
         print("📊 包括：")
         print("   - MongoDB中的所有datasets、collections、data")
-        print("   - Milvus向量库中的所有向量")
-        print("   - Meilisearch中的所有文档")
+        print("   - Qdrant向量库中的所有向量")
         print("")
         
         confirm = input("🤔 确定要继续吗？输入 'YES' 确认: ")
@@ -42,15 +41,11 @@ async def clear_all_data():
         logger.info("1️⃣ 清空MongoDB数据...")
         success_mongo = await clear_mongodb()
         
-        # 2. 清空Milvus
-        logger.info("2️⃣ 清空Milvus向量库...")
-        success_milvus = await clear_milvus()
+        # 2. 清空Qdrant
+        logger.info("2️⃣ 清空Qdrant向量库...")
+        success_qdrant = await clear_qdrant()
         
-        # 3. 清空Meilisearch
-        logger.info("3️⃣ 清空Meilisearch索引...")
-        success_meili = await clear_meilisearch()
-        
-        if success_mongo and success_milvus and success_meili:
+        if success_mongo and success_qdrant:
             print("\n🎉 所有数据清空完成！")
             print("💡 现在可以重新导入数据了")
             return True
@@ -67,7 +62,7 @@ async def clear_all_data():
 async def clear_mongodb():
     """清空MongoDB数据"""
     try:
-        from app.vectorstores.mongo_metadata import mongo_store
+        from app.stores.mongo import mongo_store
         
         # 连接MongoDB
         mongo_store.connect()
@@ -100,99 +95,24 @@ async def clear_mongodb():
         logger.error(f"❌ MongoDB清空失败: {e}")
         return False
 
-async def clear_milvus():
-    """清空Milvus向量库"""
+async def clear_qdrant():
+    """清空Qdrant向量库"""
     try:
-        from app.vectorstores.milvus_store import milvus_store
-        
-        # 连接Milvus
-        milvus_store.connect(dimension=1024)
-        
-        if milvus_store.collection:
-            # 获取向量数量
-            stats = milvus_store.collection.num_entities
-            logger.info(f"📊 Milvus集合 '{milvus_store.collection_name}': {stats} 个向量")
-            
-            if stats > 0:
-                # 删除所有数据
-                expr = "id >= 0"  # 删除所有记录
-                milvus_store.collection.delete(expr)
-                
-                # 重新加载集合以确保删除生效
-                milvus_store.collection.load()
-                
-                # 验证删除结果
-                new_stats = milvus_store.collection.num_entities
-                logger.info(f"🗑️  删除后向量数量: {new_stats}")
-                
-                if new_stats == 0:
-                    logger.info("✅ Milvus向量库清空成功")
-                else:
-                    logger.warning(f"⚠️ Milvus可能未完全清空，剩余: {new_stats}")
-            else:
-                logger.info("✅ Milvus向量库已经为空")
-        else:
-            logger.info("✅ Milvus集合不存在或未初始化")
-        
-        return True
-        
-    except Exception as e:
-        logger.error(f"❌ Milvus清空失败: {e}")
-        return False
-
-async def clear_meilisearch():
-    """清空Meilisearch索引"""
-    try:
-        import meilisearch
+        from app.stores.qdrant import qdrant_store
         from config.settings import app_config
         
-        # 连接Meilisearch
-        client = meilisearch.Client(
-            url=app_config.meilisearch_url,
-            api_key=app_config.meilisearch_api_key
-        )
+        # 连接Qdrant
+        qdrant_store.connect(dimension=app_config.openai_embedding_dimension)
         
-        index_name = "rag_documents"
-        
-        try:
-            # 获取索引
-            index = client.index(index_name)
-            
-            # 获取文档数量
-            stats = index.get_stats()
-            doc_count = stats.get('numberOfDocuments', 0)
-            logger.info(f"📊 Meilisearch索引 '{index_name}': {doc_count} 个文档")
-            
-            if doc_count > 0:
-                # 删除所有文档
-                task = index.delete_all_documents()
-                logger.info(f"🗑️  删除任务ID: {task.task_uid}")
-                
-                # 等待任务完成
-                client.wait_for_task(task.task_uid)
-                
-                # 验证删除结果
-                new_stats = index.get_stats()
-                new_count = new_stats.get('numberOfDocuments', 0)
-                logger.info(f"🗑️  删除后文档数量: {new_count}")
-                
-                if new_count == 0:
-                    logger.info("✅ Meilisearch索引清空成功")
-                else:
-                    logger.warning(f"⚠️ Meilisearch可能未完全清空，剩余: {new_count}")
-            else:
-                logger.info("✅ Meilisearch索引已经为空")
-                
-        except meilisearch.errors.MeilisearchApiError as e:
-            if "index_not_found" in str(e):
-                logger.info("✅ Meilisearch索引不存在，无需清空")
-            else:
-                raise e
+        if qdrant_store.delete_collection():
+            logger.info("✅ Qdrant向量库清空成功")
+        else:
+            logger.warning("⚠️ Qdrant集合可能不存在或清空失败")
         
         return True
         
     except Exception as e:
-        logger.error(f"❌ Meilisearch清空失败: {e}")
+        logger.error(f"❌ Qdrant清空失败: {e}")
         return False
 
 async def main():
