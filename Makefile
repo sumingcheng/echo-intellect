@@ -1,22 +1,38 @@
-docker_image_name ?= echoIntellect
-docker_image_tag ?= v1.0.0
+.PHONY: dev dev-be dev-fe infra infra-down test lint build clean
+
+# ── Development ──
+
+dev: infra dev-be dev-fe
+
+dev-be:
+	uv run python main.py
+
+dev-fe:
+	cd web && pnpm dev
+
+# ── Infrastructure ──
+
+infra:
+	cd deploy && docker compose up -d
+
+infra-down:
+	cd deploy && docker compose down
+
+# ── Quality ──
+
+test:
+	uv run python -m pytest tests/ -v
+
+lint:
+	cd web && pnpm lint
+
+# ── Docker Build ──
+
+IMAGE ?= echo-intellect
+TAG   ?= latest
 
 build:
-	docker build -f deploy/Dockerfile -t $(docker_image_name):$(docker_image_tag) .
+	docker build -f deploy/Dockerfile -t $(IMAGE):$(TAG) .
 
-run:
-	cd deploy && docker-compose -f docker-compose.yaml up -d
-
-down:
-	cd deploy && docker-compose -f docker-compose.yaml down
-
-rm:
-	@docker rmi ${docker_image_name}:${docker_image_tag} || true
-
-reset:
-	-@git pull
-	-@cd deploy && docker-compose -f docker-compose.yaml down
-	-@$(MAKE) build
-	-@cd deploy && docker-compose -f docker-compose.yaml up -d
-
-.PHONY: build run reset down rm
+clean:
+	@docker rmi $(IMAGE):$(TAG) 2>/dev/null || true
