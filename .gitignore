@@ -169,5 +169,7 @@ dev.md
 deploy/qdrant/
 deploy/mongo/
 deploy/redis/
+deploy/milvus/
+deploy/minio/
 
-吞噬星空.txt
+logs/
