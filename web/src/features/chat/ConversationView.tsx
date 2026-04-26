@@ -48,8 +48,9 @@ function ReferenceModal({ references, onClose }: { references: Reference[]; onCl
               <p className="whitespace-pre-wrap text-[13px] leading-6 text-stone-700 dark:text-stone-300">
                 {ref.content}
               </p>
-              <div className="mt-2 flex items-center gap-3 text-[11px] text-stone-400 dark:text-stone-500">
+              <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-stone-400 dark:text-stone-500">
                 <span>{t('refScore', { score: ref.score })}</span>
+                {ref.source && <span>{ref.source}</span>}
                 <span>{ref.collection_id}</span>
               </div>
             </div>

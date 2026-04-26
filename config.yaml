@@ -23,7 +23,7 @@ rerank_endpoint: /v1/rerank
 rerank_access_token: "123456"
 
 max_tokens_limit: 4000
-relevance_threshold: 0.6
+relevance_threshold: 0.3
 
 llm_providers: []
 default_llm: ""

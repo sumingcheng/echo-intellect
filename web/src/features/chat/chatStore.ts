@@ -7,6 +7,7 @@ export interface Reference {
   content: string
   score: number
   collection_id: string
+  source?: string
 }
 
 export interface ChatMessage {

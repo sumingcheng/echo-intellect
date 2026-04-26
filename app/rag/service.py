@@ -187,7 +187,7 @@ class RetrievalChain:
                     results=reranked_results,
                     max_tokens=max_tokens,
                     relevance_threshold=relevance_threshold,
-                    min_results=1,
+                    min_results=3,
                     preserve_diversity=True,
                 )
 
@@ -312,7 +312,7 @@ class RetrievalChain:
             filtered_results = token_relevance_filter.filter_results(
                 results=reranked, max_tokens=max_tokens,
                 relevance_threshold=relevance_threshold,
-                min_results=1, preserve_diversity=True,
+                min_results=3, preserve_diversity=True,
             )
 
         conversation_history = ""
@@ -354,9 +354,10 @@ class RetrievalChain:
             "retrieved_chunks_count": len(filtered_results),
             "references": [
                 {
-                    "content": r.content[:300],
+                    "content": r.content[:500],
                     "score": round(r.final_score, 3),
                     "collection_id": r.collection_id,
+                    "source": r.metadata.get("source", ""),
                 }
                 for r in filtered_results
             ],

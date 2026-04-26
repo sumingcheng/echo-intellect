@@ -71,13 +71,13 @@ class TestFormatContext:
         ctx = self.prompts.format_context([_make_result("段落A", 0.9, "doc.pdf")])
         assert "段落A" in ctx
         assert "doc.pdf" in ctx
-        assert "0.90" in ctx
+        assert "0.900" in ctx
 
     def test_multiple_results_numbered(self):
         results = [_make_result(f"段落{i}") for i in range(3)]
         ctx = self.prompts.format_context(results)
-        assert "[信息 1]" in ctx
-        assert "[信息 3]" in ctx
+        assert '<source id="1"' in ctx
+        assert '<source id="3"' in ctx
 
 
 class TestGetTemplate:
